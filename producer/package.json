@@ -1,0 +1,14 @@
+{
+    "name": "producer",
+    "version": "1.0.0",
+    "description": "Kafka producer service",
+    "main": "producer.js",
+    "scripts": {
+        "start": "node producer.js"
+    },
+    "dependencies": {
+        "dotenv": "^16.4.5",
+        "kafkajs": "^2.2.4",
+        "socket.io": "^4.8.1"
+    }
+}

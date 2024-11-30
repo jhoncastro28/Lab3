@@ -1,20 +1,20 @@
-# Imagen base de Node.js
-FROM node:18
+# Usa una imagen base de Node.js
+FROM node:16-alpine
 
-# Crear el directorio de la aplicación
+# Establece el directorio de trabajo
 WORKDIR /usr/src/app
 
-# Copiar los archivos necesarios
+# Copia los archivos de dependencias
 COPY package*.json ./
-COPY database.js ./
-COPY .env ./
-COPY models ./models
 
-# Instalar las dependencias
+# Instala las dependencias
 RUN npm install
 
-# Exponer el puerto (si es necesario)
+# Copia el resto de los archivos
+COPY . .
+
+# Expone el puerto del servidor
 EXPOSE 3004
 
-# Comando para ejecutar el consumer
+# Comando para iniciar el consumidor
 CMD ["node", "database.js"]

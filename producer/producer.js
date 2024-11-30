@@ -1,37 +1,39 @@
 const { Kafka } = require("kafkajs");
+const socketIo = require("socket.io");
+require("dotenv").config();
 
-// Configurar Kafka
+// Configuración de Kafka
 const kafka = new Kafka({
     clientId: "movie-producer",
-    brokers: ["localhost:9092"] // Dirección del broker Kafka
+    brokers: process.env.KAFKA_BROKERS.split(",")
 });
-
-// Crear un producer
 const producer = kafka.producer();
+const topic = process.env.KAFKA_TOPIC;
+
+// Configuración del servidor Socket.IO
+const PORT = process.env.PRODUCER_PORT || 3002;
+const io = socketIo(PORT, {
+    cors: {
+        origin: "*",
+        methods: ["GET", "POST"]
+    }
+});
 
 const run = async () => {
     await producer.connect();
     console.log("Producer conectado a Kafka");
 
-    // Simular el envío de eventos desde el frontend (socket.io)
-    const io = require("socket.io")(3002, {
-        cors: { origin: "*" }
-    });
-
     io.on("connection", (socket) => {
         console.log("Cliente conectado:", socket.id);
 
-        // Escuchar eventos de selección de películas
         socket.on("movie_selected", async (data) => {
             console.log("Evento recibido:", data);
 
             try {
-                // Enviar el evento al tema "movie-events"
+                // Enviar el evento al tema de Kafka
                 await producer.send({
-                    topic: "movie-events",
-                    messages: [
-                        { value: JSON.stringify(data) }
-                    ]
+                    topic: topic,
+                    messages: [{ value: JSON.stringify(data) }]
                 });
                 console.log("Evento publicado en Kafka");
             } catch (err) {

@@ -1,60 +1,75 @@
-const { Kafka } = require("kafkajs");
-const { Sequelize, DataTypes } = require("sequelize");
 require("dotenv").config();
+const { Kafka } = require("kafkajs");
+const express = require("express");
+const sequelize = require("./sequelize");
+const { User, Movie } = require("./models/User");
 
-// Configuración de la base de datos
-const sequelize = new Sequelize(
-    process.env.DB_NAME,
-    process.env.DB_USER,
-    process.env.DB_PASSWORD,
-    {
-        host: process.env.DB_HOST,
-        dialect: "mysql",
-    }
-);
+const app = express();
+const PORT = process.env.PORT || 3004;
 
-// Modelo de Usuario
-const User = require("./models/User")(sequelize, DataTypes);
-
-// Conexión a Kafka
+// Configuración de Kafka
 const kafka = new Kafka({
-    clientId: "database-consumer",
+    clientId: "movie-database",
     brokers: [process.env.KAFKA_BROKER],
 });
-
 const consumer = kafka.consumer({ groupId: "database-group" });
 
-const run = async () => {
-    // Conectar a la base de datos y sincronizar modelos
-    await sequelize.authenticate();
-    console.log("Conectado a la base de datos.");
-    await sequelize.sync({ alter: true });
-
-    // Conectar a Kafka
+async function consumeEvents() {
     await consumer.connect();
     await consumer.subscribe({ topic: process.env.KAFKA_TOPIC, fromBeginning: true });
 
-    console.log("Conectado a Kafka, esperando eventos...");
+    console.log("Conectado al topic de Kafka. Esperando eventos...");
 
     await consumer.run({
-        eachMessage: async ({ message }) => {
+        eachMessage: async ({ topic, partition, message }) => {
             const event = JSON.parse(message.value.toString());
             const { user, movie, timestamp } = event;
 
-            // Registrar película vista en la base de datos
-            const [dbUser, created] = await User.findOrCreate({
-                where: { name: user.name },
-                defaults: { age: user.age },
-            });
+            try {
+                // Buscar o crear el usuario
+                const [userRecord] = await User.findOrCreate({
+                    where: { name: user.name },
+                    defaults: { age: user.age, email: user.parentEmail },
+                });
 
-            await dbUser.createMovie({
-                title: movie.title,
-                watchedAt: timestamp,
-            });
+                // Agregar la película al usuario
+                await Movie.create({
+                    title: movie.title,
+                    timestamp: new Date(timestamp),
+                    UserId: userRecord.id,
+                });
 
-            console.log(`Registrada película '${movie.title}' para el usuario ${user.name}.`);
+                console.log(`Película '${movie.title}' añadida para el usuario '${user.name}'`);
+            } catch (error) {
+                console.error("Error al procesar evento:", error);
+            }
         },
     });
-};
+}
 
-run().catch(console.error);
+// Endpoint para mostrar el recap
+app.get("/recap", async (req, res) => {
+    const { name } = req.query;
+    if (!name) return res.status(400).send("Nombre del usuario requerido");
+
+    try {
+        const user = await User.findOne({
+            where: { name },
+            include: [{ model: Movie, as: "movies" }],
+        });
+
+        if (!user) return res.status(404).send("Usuario no encontrado");
+
+        res.json({ movies: user.movies });
+    } catch (error) {
+        console.error("Error al obtener el recap:", error);
+        res.status(500).send("Error interno del servidor");
+    }
+});
+
+// Iniciar el servidor y el consumidor
+app.listen(PORT, async () => {
+    console.log(`Servidor corriendo en http://localhost:${PORT}`);
+    await sequelize.sync();
+    consumeEvents();
+});

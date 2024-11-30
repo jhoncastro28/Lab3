@@ -1,28 +1,36 @@
-module.exports = (sequelize, DataTypes) => {
-    const User = sequelize.define("User", {
-        name: {
-            type: DataTypes.STRING,
-            allowNull: false,
-        },
-        age: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-        },
-    });
+const { Sequelize, DataTypes } = require("sequelize");
+const sequelize = require("../sequelize");
 
-    const Movie = sequelize.define("Movie", {
-        title: {
-            type: DataTypes.STRING,
-            allowNull: false,
-        },
-        watchedAt: {
-            type: DataTypes.DATE,
-            allowNull: false,
-        },
-    });
+// Modelo para el usuario
+const User = sequelize.define("User", {
+    name: {
+        type: DataTypes.STRING,
+        allowNull: false,
+    },
+    age: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+    },
+    email: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
+});
 
-    User.hasMany(Movie, { as: "movies" });
-    Movie.belongsTo(User);
+// Modelo para las películas vistas por el usuario
+const Movie = sequelize.define("Movie", {
+    title: {
+        type: DataTypes.STRING,
+        allowNull: false,
+    },
+    timestamp: {
+        type: DataTypes.DATE,
+        allowNull: false,
+    },
+});
 
-    return User;
-};
+// Relación entre usuarios y películas
+User.hasMany(Movie, { as: "movies" });
+Movie.belongsTo(User);
+
+module.exports = { User, Movie };

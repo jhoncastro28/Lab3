@@ -1,19 +1,20 @@
-# Imagen base de Node.js
-FROM node:18
+# Usa una imagen base de Node.js
+FROM node:16-alpine
 
-# Crear el directorio de la aplicación
+# Establece el directorio de trabajo dentro del contenedor
 WORKDIR /usr/src/app
 
-# Copiar archivos necesarios
+# Copia solo los archivos de dependencias
 COPY package*.json ./
-COPY producer.js ./
-COPY .env ./
 
-# Instalar dependencias
+# Instala las dependencias
 RUN npm install
 
-# Exponer el puerto
+# Copia el resto de los archivos del proyecto
+COPY . .
+
+# Expone el puerto (si es necesario)
 EXPOSE 3002
 
-# Comando para ejecutar el producer
-CMD ["node", "producer.js"]
+# Comando para iniciar el servicio
+CMD ["npm", "start"]

@@ -1,0 +1,9 @@
+# Usa una imagen base de MySQL
+FROM mysql:8.0
+
+# Copia los archivos de configuración y el script de inicialización
+COPY my.cnf /etc/mysql/my.cnf
+COPY init.sql /docker-entrypoint-initdb.d/
+
+# Exponer el puerto 3306 para conexiones externas
+EXPOSE 3306

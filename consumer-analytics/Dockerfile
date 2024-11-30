@@ -1,20 +1,20 @@
-# Imagen base de Node.js
-FROM node:18
+# Usa una imagen base de Node.js
+FROM node:16-alpine
 
-# Crear directorio de la aplicación
+# Establece el directorio de trabajo
 WORKDIR /usr/src/app
 
-# Copiar archivos necesarios
+# Copia los archivos de dependencias
 COPY package*.json ./
-COPY analytics.js ./
-COPY .env ./
-COPY public ./public
 
-# Instalar dependencias
+# Instala las dependencias
 RUN npm install
 
-# Exponer el puerto
+# Copia el resto de los archivos
+COPY . .
+
+# Expone el puerto del servidor
 EXPOSE 3003
 
-# Comando para ejecutar el consumer
+# Comando para iniciar el servicio
 CMD ["node", "analytics.js"]

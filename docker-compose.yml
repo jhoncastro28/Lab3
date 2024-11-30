@@ -1,69 +1,108 @@
-version: '3.8'
+version: "3.9"
 services:
   zookeeper:
     image: confluentinc/cp-zookeeper:latest
+    container_name: zookeeper
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
-    ports:
-      - "2181:2181"
+    networks:
+      - kafka-net
 
   kafka:
     image: confluentinc/cp-kafka:latest
+    container_name: kafka
     ports:
       - "9092:9092"
     environment:
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    depends_on:
+      - zookeeper
+    networks:
+      - kafka-net
+
+  database:
+    image: mysql:8.0
+    container_name: database
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - ./database/my.cnf:/etc/mysql/my.cnf
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - database_data:/var/lib/mysql
+    networks:
+      - kafka-net
+
+  producer:
+    build:
+      context: ./producer
+    container_name: producer
+    ports:
+      - "3002:3002"
+    environment:
+      - KAFKA_BROKERS=${KAFKA_BROKERS}
+      - KAFKA_TOPIC=${KAFKA_TOPIC}
+      - PRODUCER_PORT=${PRODUCER_PORT}
+    networks:
+      - kafka-net
 
   consumer-analytics:
     build:
       context: ./consumer-analytics
+    container_name: consumer-analytics
     ports:
       - "3003:3003"
-    depends_on:
-      - kafka
-      
+    environment:
+      - KAFKA_BROKERS=${KAFKA_BROKERS}
+      - KAFKA_TOPIC=${KAFKA_TOPIC}
+      - SOCKET_SERVER_PORT=${SOCKET_SERVER_PORT}
+    networks:
+      - kafka-net
+
   consumer-notifications:
-  build:
-    context: ./consumer-notifications
-  depends_on:
-    - kafka
-  environment:
-    - KAFKA_BROKER=localhost:9092
-    - KAFKA_TOPIC=movie-events
-    - EMAIL_HOST=smtp.gmail.com
-    - EMAIL_PORT=587
-    - EMAIL_USER=tu_correo@gmail.com
-    - EMAIL_PASSWORD=tu_contraseña
+    build:
+      context: ./consumer-notifications
+    container_name: consumer-notifications
+    ports:
+      - "3004:3004"
+    environment:
+      - KAFKA_BROKERS=${KAFKA_BROKERS}
+      - KAFKA_TOPIC=${KAFKA_TOPIC}
+      - SMTP_SERVER=${SMTP_SERVER}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - NOTIFICATIONS_PORT=${NOTIFICATIONS_PORT}
+    networks:
+      - kafka-net
 
   consumer-database:
     build:
       context: ./consumer-database
-    depends_on:
-      - kafka
-      - database
-    environment:
-      - KAFKA_BROKER=localhost:9092
-      - KAFKA_TOPIC=movie-events
-      - DB_HOST=database
-      - DB_NAME=movies_db
-      - DB_USER=root
-      - DB_PASSWORD=password
-
-  database:
-    image: mysql:8.0
-    container_name: mysql_database
-    environment:
-      MYSQL_ROOT_PASSWORD: password
-      MYSQL_DATABASE: movies_db
-    volumes:
-      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
-      - db_data:/var/lib/mysql
+    container_name: consumer-database
     ports:
-      - "3306:3306"
+      - "3005:3005"
+    environment:
+      - KAFKA_BROKERS=${KAFKA_BROKERS}
+      - KAFKA_TOPIC=${KAFKA_TOPIC}
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - CONSUMER_DATABASE_PORT=${CONSUMER_DATABASE_PORT}
+    networks:
+      - kafka-net
 
-  volumes:
-    db_data:
+networks:
+  kafka-net:
+    driver: bridge
 
+volumes:
+  database_data:

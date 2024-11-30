@@ -1,22 +1,21 @@
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Top 10 Películas</title>
-  <link rel="stylesheet" href="styles.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Top 10 Películas - Analytics</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
-
 <body>
-  <header>
-    <h1>Top 10 Películas Más Vistas</h1>
-  </header>
-  <main>
-    <ul id="movie-list"></ul>
-  </main>
-  <script src="/socket.io/socket.io.js"></script>
-  <script src="analyticsService.js"></script>
+    <header>
+        <h1>Top 10 Películas</h1>
+    </header>
+    <main>
+        <ul id="top-movies">
+            <!-- Aquí se insertará dinámicamente el Top 10 -->
+        </ul>
+    </main>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="scripts.js" defer></script>
 </body>
-
 </html>

@@ -1,69 +1,69 @@
-const { Kafka } = require("kafkajs");
 const express = require("express");
 const http = require("http");
 const socketIo = require("socket.io");
+const { Kafka } = require("kafkajs");
 require("dotenv").config();
 
 // Configuración de Kafka
 const kafka = new Kafka({
-    clientId: "analytics-consumer",
-    brokers: [process.env.KAFKA_BROKER]
+    clientId: "consumer-analytics",
+    brokers: process.env.KAFKA_BROKERS.split(","),
 });
-
 const consumer = kafka.consumer({ groupId: "analytics-group" });
 
-// Configuración de Express y Socket.IO
+// Gestión de películas (en memoria)
+const movies = {};
+
+// Configuración del servidor Express y Socket.IO
 const app = express();
 const server = http.createServer(app);
-const io = socketIo(server, { cors: { origin: "*" } });
+const io = socketIo(server);
 
-// Contador de vistas
-const movieViews = {};
+// Servir archivos estáticos
+app.use(express.static("public"));
 
+// Actualizar y emitir el top 10
+const emitTop10 = () => {
+    const topMovies = Object.values(movies)
+        .sort((a, b) => b.views - a.views)
+        .slice(0, 10);
+    io.emit("update_top_10", topMovies);
+};
+
+// Conexión con Socket.IO
 io.on("connection", (socket) => {
-    console.log("Cliente conectado al dashboard");
-
-    // Enviar estadísticas actuales al cliente al conectarse
-    socket.emit("update_top_movies", getTopMovies());
+    console.log("Cliente conectado");
+    emitTop10(); // Enviar el top 10 al cliente recién conectado
 });
 
-// Función para obtener el top 10
-function getTopMovies() {
-    return Object.entries(movieViews)
-        .sort(([, a], [, b]) => b - a) // Ordenar por vistas (descendente)
-        .slice(0, 10) // Tomar los primeros 10
-        .map(([title, views]) => ({ title, views }));
-}
-
-// Consumir eventos de Kafka
+// Conectar al topic de Kafka
 const run = async () => {
     await consumer.connect();
     await consumer.subscribe({ topic: process.env.KAFKA_TOPIC, fromBeginning: true });
 
-    console.log("Conectado a Kafka, esperando eventos...");
+    console.log("Consumidor conectado a Kafka");
+
     await consumer.run({
         eachMessage: async ({ message }) => {
-            const event = JSON.parse(message.value.toString());
-            const movieTitle = event.movie.title;
+            const eventData = JSON.parse(message.value.toString());
+            const { movie } = eventData;
 
-            // Incrementar contador de vistas
-            movieViews[movieTitle] = (movieViews[movieTitle] || 0) + 1;
+            if (!movies[movie.id]) {
+                movies[movie.id] = { title: movie.title, views: 0 };
+            }
+            movies[movie.id].views += 1;
 
-            console.log(`Actualizado: ${movieTitle} -> ${movieViews[movieTitle]} vistas`);
+            console.log(`Película actualizada: ${movie.title} (${movies[movie.id].views} visitas)`);
 
-            // Enviar estadísticas actualizadas al cliente
-            io.emit("update_top_movies", getTopMovies());
-        }
+            emitTop10(); // Actualizar top 10
+        },
     });
 };
 
 run().catch(console.error);
 
-// Servir los archivos estáticos del dashboard
-app.use(express.static("public"));
-
-// Iniciar el servidor
-const PORT = process.env.PORT || 3003;
+// Iniciar servidor
+const PORT = process.env.ANALYTICS_PORT || 3003;
 server.listen(PORT, () => {
-    console.log(`Servidor de Analytics corriendo en http://localhost:${PORT}`);
+    console.log(`Consumer Analytics corriendo en http://localhost:${PORT}`);
 });

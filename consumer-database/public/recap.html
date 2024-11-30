@@ -1,54 +1,19 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Recap de Películas</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            background-color: #f4f4f4;
-        }
-
-        .movie {
-            margin: 20px;
-            animation: fadeIn 2s;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-            }
-
-            to {
-                opacity: 1;
-            }
-        }
-    </style>
+    <!-- Enlace a la hoja de estilos -->
+    <link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
     <h1>Recap de Películas Vistas</h1>
-    <div id="movies"></div>
-
-    <script>
-        async function fetchRecap() {
-            const response = await fetch("/recap?user=nombre_del_usuario");
-            const movies = await response.json();
-
-            const moviesDiv = document.getElementById("movies");
-            movies.forEach(movie => {
-                const div = document.createElement("div");
-                div.className = "movie";
-                div.textContent = `${movie.title} - ${new Date(movie.watchedAt).toLocaleString()}`;
-                moviesDiv.appendChild(div);
-            });
-        }
-
-        fetchRecap();
-    </script>
+    <div id="recap-container"></div>
+    <!-- Enlace al script -->
+    <script src="scripts.js"></script>
 </body>
 
 </html>

@@ -5,14 +5,16 @@ const io = require("socket.io")(3001, {
     }
 });
 
-io.on("connection", socket => {
+io.on("connection", (socket) => {
     console.log("Cliente conectado:", socket.id);
 
     // Manejar evento de película seleccionada
-    socket.on("movie_selected", eventData => {
-        console.log("Evento recibido:", eventData);
-        // Emitir evento a todos los consumidores
-        io.emit("new_event", eventData);
+    socket.on("movie_selected", (eventData) => {
+        console.log("Evento recibido en catalog:", eventData);
+
+        // Redirigir el evento al producer (puerto 3002)
+        const producerSocket = require("socket.io-client")("http://localhost:3002");
+        producerSocket.emit("movie_selected", eventData);
     });
 
     socket.on("disconnect", () => {

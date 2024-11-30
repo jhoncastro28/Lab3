@@ -1,0 +1,13 @@
+# Node.js
+node_modules/
+npm-debug.log
+yarn-error.log
+*.env
+
+# Docker
+*.log
+docker-compose.override.yml
+
+# Sistemas Operativos
+.DS_Store
+Thumbs.db

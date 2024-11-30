@@ -1,12 +1,15 @@
+// Conexión con Socket.IO
 const socket = io();
 
-socket.on("update_top_movies", (movies) => {
-    const movieList = document.getElementById("movie-list");
-    movieList.innerHTML = ""; // Limpiar la lista
+// Escuchar actualizaciones del top 10
+socket.on("update_top_10", (topMovies) => {
+    const topMoviesList = document.getElementById("top-movies");
+    topMoviesList.innerHTML = "";
 
-    movies.forEach(({ title, views }) => {
-        const li = document.createElement("li");
-        li.textContent = `${title} - ${views} vistas`;
-        movieList.appendChild(li);
+    // Renderizar las películas
+    topMovies.forEach((movie, index) => {
+        const listItem = document.createElement("li");
+        listItem.textContent = `${index + 1}. ${movie.title} - ${movie.views} visitas`;
+        topMoviesList.appendChild(listItem);
     });
 });

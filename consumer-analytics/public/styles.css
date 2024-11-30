@@ -3,19 +3,18 @@ body {
     margin: 0;
     padding: 0;
     background-color: #f4f4f4;
+    color: #333;
 }
 
 header {
-    background-color: #222;
+    background-color: #444;
     color: #fff;
-    text-align: center;
     padding: 1rem;
+    text-align: center;
 }
 
 main {
-    display: flex;
-    justify-content: center;
-    margin: 2rem;
+    padding: 2rem;
 }
 
 ul {
@@ -23,11 +22,10 @@ ul {
     padding: 0;
 }
 
-li {
+ul li {
     background: #fff;
-    margin: 1rem;
+    margin: 0.5rem 0;
     padding: 1rem;
     border-radius: 5px;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-    font-size: 1.2rem;
 }
