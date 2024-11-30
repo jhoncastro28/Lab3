@@ -16,7 +16,8 @@ const io = socketIo(PORT, {
     cors: {
         origin: "*",
         methods: ["GET", "POST"]
-    }
+    },
+    host: '0.0.0.0' // Escuchar en todas las interfaces
 });
 
 const run = async () => {

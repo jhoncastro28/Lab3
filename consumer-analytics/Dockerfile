@@ -10,8 +10,11 @@ COPY package*.json ./
 # Instala las dependencias
 RUN npm install
 
-# Copia el resto de los archivos
+# Copia el resto de los archivos de tu proyecto (incluyendo 'public')
 COPY . .
+
+# Copia específicamente la carpeta 'public' a la ruta deseada en el contenedor
+COPY public /usr/src/app/public
 
 # Expone el puerto del servidor
 EXPOSE 3003

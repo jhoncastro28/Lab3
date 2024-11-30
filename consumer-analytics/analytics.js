@@ -3,6 +3,7 @@ const http = require("http");
 const socketIo = require("socket.io");
 const { Kafka } = require("kafkajs");
 require("dotenv").config();
+const path = require('path');
 
 // Configuración de Kafka
 const kafka = new Kafka({
@@ -20,7 +21,7 @@ const server = http.createServer(app);
 const io = socketIo(server);
 
 // Servir archivos estáticos
-app.use(express.static("public"));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Actualizar y emitir el top 10
 const emitTop10 = () => {
@@ -65,5 +66,5 @@ run().catch(console.error);
 // Iniciar servidor
 const PORT = process.env.ANALYTICS_PORT || 3003;
 server.listen(PORT, () => {
-    console.log(`Consumer Analytics corriendo en http://localhost:${PORT}`);
+    console.log(`Consumer Analytics corriendo en http://192.168.0.117:${PORT}`);
 });

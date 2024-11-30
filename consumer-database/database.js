@@ -69,7 +69,7 @@ app.get("/recap", async (req, res) => {
 
 // Iniciar el servidor y el consumidor
 app.listen(PORT, async () => {
-    console.log(`Servidor corriendo en http://localhost:${PORT}`);
+    console.log(`Servidor corriendo en http://192.168.0.117:${PORT}`);
     await sequelize.sync();
     consumeEvents();
 });

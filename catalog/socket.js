@@ -13,7 +13,7 @@ io.on("connection", (socket) => {
         console.log("Evento recibido en catalog:", eventData);
 
         // Redirigir el evento al producer (puerto 3002)
-        const producerSocket = require("socket.io-client")("http://localhost:3002");
+        const producerSocket = require("socket.io-client")("http://192.168.0.117:3002");
         producerSocket.emit("movie_selected", eventData);
     });
 
