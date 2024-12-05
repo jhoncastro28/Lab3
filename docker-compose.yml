@@ -1,31 +1,41 @@
-version: '3'
+version: '3.8'
 services:
   zookeeper:
-    image: confluentinc/cp-zookeeper:7.3.0
+    image: confluentinc/cp-zookeeper:latest
     container_name: zookeeper
+    ports:
+      - "2181:2181"
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_INIT_LIMIT: 5
+      ZOOKEEPER_SYNC_LIMIT: 2
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper
     networks:
       - kafka-network
-    ports:
-      - "2181:2181"
 
   kafka:
-    image: confluentinc/cp-kafka:7.3.0
+    image: confluentinc/cp-kafka:latest
     container_name: kafka
-    depends_on:
-      - zookeeper
+    ports:
+      - "9092:9092"
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://192.168.1.50:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://192.168.20.16:9092  # Ajusta esta IP a tu red local o usa docker network
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL: PLAINTEXT
+      KAFKA_LISTENER_NAMES: PLAINTEXT
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_LOG_RETENTION_HOURS: 168  # Retención de logs por 7 días
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    depends_on:
+      - zookeeper
     networks:
-      - kafka-network
-    ports:
-      - "9092:9092"
+      - kafka
 
   producer:
     build:
@@ -62,9 +72,9 @@ services:
       - KAFKA_TOPIC=movie-events
       - SMTP_HOST=smtp.gmail.com
       - SMTP_PORT=587
-      - SMTP_USER=tu_correo@gmail.com
-      - SMTP_PASSWORD=tu_contraseña
-      - SMTP_FROM_EMAIL=tu_correo@gmail.com
+      - SMTP_USER=jhoncastrom28@gmail.com
+      - SMTP_PASSWORD=fnhn ocwt hphu hsko
+      - SMTP_FROM_EMAIL=jhoncastrom28@gmail.com
       - NOTIFICATIONS_PORT=3004
     networks:
       - kafka-network

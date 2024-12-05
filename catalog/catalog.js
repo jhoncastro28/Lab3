@@ -9,6 +9,7 @@ require('dotenv').config();
 // Configuración de TMDb API
 const TMDB_API_KEY = process.env.TMDB_API_KEY;
 const TMDB_API_URL = 'https://api.themoviedb.org/3/movie/popular';
+const IPLOCAL = process.env.IPLOCAL;
 
 const app = express();
 const server = http.createServer(app);
@@ -45,7 +46,7 @@ async function sendEventToProducer(eventData) {
         const conn = await createSSHConnection();
 
         // Establecer conexión Socket.IO con el producer a través del túnel SSH
-        const producerSocket = io_client(`http://192.168.0.117:${process.env.PRODUCER_PORT}`, {
+        const producerSocket = io_client(`http://${IPLOCAL}:${process.env.PRODUCER_PORT}`, {
             transports: ['websocket']
         });
 
@@ -101,5 +102,5 @@ app.use(express.static('public'));
 
 // Iniciar el servidor Express y el servidor Socket.IO
 server.listen(PORT, () => {
-    console.log(`Servidor corriendo en http://192.168.0.117:${PORT}`);
+    console.log(`Servidor corriendo en http://${IPLOCAL}:${PORT}`);
 });
