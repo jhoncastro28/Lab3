@@ -1,9 +1,8 @@
 const express = require('express');
 const axios = require('axios');
-const socketIo = require('socket.io');
+const { io: io_client } = require("socket.io-client");
+const { Client: SSHClient } = require('ssh2');
 const http = require('http');
-const Client = require('ssh2').Client;
-const io_client = require('socket.io-client');
 require('dotenv').config();
 
 // Configuración de TMDb API
@@ -11,68 +10,84 @@ const TMDB_API_KEY = process.env.TMDB_API_KEY;
 const TMDB_API_URL = 'https://api.themoviedb.org/3/movie/popular';
 const IPLOCAL = process.env.IPLOCAL;
 
+const PRODUCER_URL = process.env.PRODUCER_URL || "http://192.168.0.36:3002";
+const SSH_HOST = process.env.SSH_HOST || "192.168.0.36";
+const SSH_USER = process.env.SSH_USER || "your-ssh-user";
+const SSH_PASSWORD = process.env.SSH_PASSWORD || "your-ssh-password";
+
 const app = express();
 const server = http.createServer(app);
-const io = socketIo(server);
+const io = require('socket.io')(server); // Socket.IO para clientes frontend
 
 const PORT = process.env.PORT || 3000;
 
-// Función para establecer conexión SSH
-function createSSHConnection() {
-    return new Promise((resolve, reject) => {
-        const conn = new Client();
+// ** Nueva configuración SSH y Socket.IO para el producer ** //
+const conn = new SSHClient();
+const producerSocket = io_client(PRODUCER_URL);
 
-        conn.on('ready', () => {
-            console.log('Conexión SSH establecida');
-            resolve(conn);
-        }).on('error', (err) => {
-            console.error('Error de conexión SSH:', err);
-            reject(err);
-        }).connect({
-            host: process.env.SSH_HOST,
-            port: process.env.SSH_PORT || 22,
-            username: process.env.SSH_USERNAME,
-            password: process.env.SSH_PASSWORD
-            // Alternativamente, puedes usar:
-            // privateKey: require('fs').readFileSync('/path/to/private/key')
+conn.on("ready", () => {
+    console.log("Conexión SSH lista.");
+
+    // Leer logs en tiempo real y emitir eventos al producer
+    conn.exec("tail -f /path/to/log/file", (err, stream) => {
+        if (err) throw err;
+
+        stream.on("data", (data) => {
+            const movieData = parseMovieData(data.toString());
+            console.log("Datos recibidos:", movieData);
+
+            // Emitir evento al producer
+            producerSocket.emit("movie_selected", movieData, (ack) => {
+                console.log("ACK del producer:", ack);
+            });
+        });
+
+        stream.stderr.on("data", (data) => {
+            console.error("Error en el stream SSH:", data.toString());
         });
     });
+}).connect({
+    host: SSH_HOST,
+    port: 22, // Puerto SSH predeterminado
+    username: SSH_USER,
+    password: SSH_PASSWORD, // Autenticación con contraseña
+});
+
+// Manejo de errores en conexiones
+producerSocket.on("connect", () => console.log("Conectado al producer."));
+producerSocket.on("connect_error", (err) => console.error("Error al conectar al producer:", err.message));
+producerSocket.on("disconnect", () => console.log("Desconectado del producer."));
+
+// Función para parsear datos de logs
+function parseMovieData(logLine) {
+    const parts = logLine.trim().split(" ");
+    return {
+        movie: {
+            id: parts[0],
+            title: parts.slice(1).join(" "),
+        },
+        user: {
+            name: "User Example",
+            age: 25,
+            parentEmail: "parent@example.com",
+        },
+        timestamp: new Date().toISOString(),
+    };
 }
 
-// Función para enviar evento al producer mediante SSH
-async function sendEventToProducer(eventData) {
-    try {
-        // Establecer conexión SSH
-        const conn = await createSSHConnection();
-
-        // Establecer conexión Socket.IO con el producer a través del túnel SSH
-        const producerSocket = io_client(`http://${IPLOCAL}:${process.env.PRODUCER_PORT}`, {
-            transports: ['websocket']
-        });
-
-        // Enviar evento al producer
-        producerSocket.emit('movie_selected', eventData);
-
-        // Cerrar conexión SSH después de un tiempo
-        setTimeout(() => {
-            conn.end();
-        }, 5000);
-
-    } catch (error) {
-        console.error('Error al enviar evento al producer:', error);
-    }
-}
+// ** Fin de nueva funcionalidad ** //
 
 // Conexión de Socket.IO
 io.on('connection', (socket) => {
     console.log('Usuario conectado');
-    
-    // Emitir evento cuando se selecciona una película
+
     socket.on('movie_selected', async (data) => {
         console.log('Película seleccionada:', data);
-        
-        // Enviar evento al producer mediante SSH
-        await sendEventToProducer(data);
+
+        // Emitir evento al producer
+        producerSocket.emit('movie_selected', data, (ack) => {
+            console.log('ACK del producer:', ack);
+        });
     });
 
     socket.on('disconnect', () => {

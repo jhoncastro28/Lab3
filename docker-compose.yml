@@ -1,86 +1,71 @@
 version: '3.8'
+
 services:
   zookeeper:
     image: confluentinc/cp-zookeeper:latest
     container_name: zookeeper
-    ports:
-      - "2181:2181"
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
-      ZOOKEEPER_INIT_LIMIT: 5
-      ZOOKEEPER_SYNC_LIMIT: 2
-    volumes:
-      - zookeeper_data:/var/lib/zookeeper
-    networks:
-      - kafka-network
+    ports:
+      - "2181:2181"
 
   kafka:
     image: confluentinc/cp-kafka:latest
     container_name: kafka
-    ports:
-      - "9092:9092"
+    depends_on:
+      - zookeeper
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://192.168.20.16:9092  # Ajusta esta IP a tu red local o usa docker network
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
-      KAFKA_LISTENER_SECURITY_PROTOCOL: PLAINTEXT
-      KAFKA_LISTENER_NAMES: PLAINTEXT
-      KAFKA_LOG_DIRS: /var/lib/kafka/data
-      KAFKA_LOG_RETENTION_HOURS: 168  # Retención de logs por 7 días
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://192.168.0.36:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-    volumes:
-      - kafka_data:/var/lib/kafka/data
-    depends_on:
-      - zookeeper
-    networks:
-      - kafka
+    ports:
+      - "9092:9092"
 
   producer:
     build:
       context: ./producer
-    container_name: movie-producer
+      dockerfile: Dockerfile
+    container_name: producer
     environment:
-      - KAFKA_BROKERS=192.168.1.50:9092
-      - KAFKA_TOPIC=movie-events
-      - PRODUCER_PORT=3002
-    networks:
-      - kafka-network
+      KAFKA_BROKERS: kafka:9092
+      KAFKA_TOPIC: movie-events
+      PRODUCER_PORT: 3002
     ports:
       - "3002:3002"
+    depends_on:
+      - kafka
 
   consumer-analytics:
     build:
       context: ./consumer-analytics
+      dockerfile: Dockerfile
     container_name: consumer-analytics
     environment:
-      - KAFKA_BROKERS=192.168.1.50:9092
-      - KAFKA_TOPIC=movie-events
-      - SOCKET_SERVER_PORT=3003
-    networks:
-      - kafka-network
+      KAFKA_BROKERS: kafka:9092
+      KAFKA_TOPIC: movie-events
+      SOCKET_SERVER_PORT: 3003
     ports:
       - "3003:3003"
+    depends_on:
+      - kafka
 
   consumer-notifications:
     build:
       context: ./consumer-notifications
+      dockerfile: Dockerfile
     container_name: consumer-notifications
     environment:
-      - KAFKA_BROKER=192.168.1.50:9092
-      - KAFKA_TOPIC=movie-events
-      - SMTP_HOST=smtp.gmail.com
-      - SMTP_PORT=587
-      - SMTP_USER=jhoncastrom28@gmail.com
-      - SMTP_PASSWORD=fnhn ocwt hphu hsko
-      - SMTP_FROM_EMAIL=jhoncastrom28@gmail.com
-      - NOTIFICATIONS_PORT=3004
-    networks:
-      - kafka-network
+      KAFKA_BROKER: kafka:9092
+      KAFKA_TOPIC: movie-events
+      SMTP_HOST: smtp.gmail.com
+      SMTP_PORT: 587
+      SMTP_USER: jhoncastrom28@gmail.com
+      SMTP_PASSWORD: fnhn ocwt hphu hsko
+      SMTP_FROM_EMAIL: jhoncastrom28@gmail.com
+      NOTIFICATIONS_PORT: 3004
     ports:
       - "3004:3004"
-
-networks:
-  kafka-network:
-    driver: bridge
+    depends_on:
+      - kafka
