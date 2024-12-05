@@ -66,5 +66,5 @@ run().catch(console.error);
 // Iniciar servidor
 const PORT = process.env.ANALYTICS_PORT || 3003;
 server.listen(PORT, () => {
-    console.log(`Consumer Analytics corriendo en http://192.168.0.117:${PORT}`);
+    console.log(`Consumer Analytics corriendo en http://192.168.0.34:${PORT}`);
 });

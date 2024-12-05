@@ -4,12 +4,13 @@ FROM python:3.9-slim
 # Establece el directorio de trabajo
 WORKDIR /usr/src/app
 
-# Instala dependencias del sistema para Kafka y SMTP
+# Instala dependencias del sistema necesarias para Kafka y SMTP
 RUN apt-get update && apt-get install -y \
     libsasl2-dev \
+    libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Copia los archivos de dependencias
+# Copia el archivo de dependencias (para aprovechar la caché de Docker)
 COPY requirements.txt .
 
 # Instala las dependencias de Python
