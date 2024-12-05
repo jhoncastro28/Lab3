@@ -1,5 +1,4 @@
 version: "3.8"
-
 services:
   zookeeper:
     image: confluentinc/cp-zookeeper:latest
@@ -9,12 +8,15 @@ services:
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
-      ZOOKEEPER_INIT_LIMIT: 5
-      ZOOKEEPER_SYNC_LIMIT: 2
     volumes:
       - zookeeper_data:/var/lib/zookeeper
     networks:
       - kafka-network
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "2181"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   kafka:
     image: confluentinc/cp-kafka:latest
@@ -24,19 +26,26 @@ services:
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
-      KAFKA_LISTENER_SECURITY_PROTOCOL: PLAINTEXT
-      KAFKA_LISTENER_NAMES: PLAINTEXT
-      KAFKA_LOG_DIRS: /var/lib/kafka/data
-      KAFKA_LOG_RETENTION_HOURS: 168
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_HOST://kafka:9092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_CREATE_TOPICS: "movie-events:1:1"
+      KAFKA_CLUSTER_ID: my-cluster-id
     volumes:
       - kafka_data:/var/lib/kafka/data
     depends_on:
-      - zookeeper
+      zookeeper:
+        condition: service_healthy
     networks:
       - kafka-network
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "9092"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   producer:
     build:
@@ -50,6 +59,9 @@ services:
       - kafka-network
     ports:
       - "3002:3002"
+    depends_on:
+      kafka:
+        condition: service_healthy
 
   consumer-analytics:
     build:
@@ -63,6 +75,9 @@ services:
       - kafka-network
     ports:
       - "3003:3003"
+    depends_on:
+      kafka:
+        condition: service_healthy
 
   consumer-notifications:
     build:
@@ -74,14 +89,17 @@ services:
       - SMTP_HOST=smtp.gmail.com
       - SMTP_PORT=587
       - SMTP_USER=jhoncastrom28@gmail.com
-      - SMTP_PASSWORD=fnhn ocwt hphu hsko
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
       - SMTP_FROM_EMAIL=jhoncastrom28@gmail.com
       - NOTIFICATIONS_PORT=3004
     networks:
       - kafka-network
     ports:
       - "3004:3004"
-  
+    depends_on:
+      kafka:
+        condition: service_healthy
+
   db:
     image: mysql:8.0
     container_name: mysql-container
@@ -97,6 +115,7 @@ services:
 
 volumes:
   kafka_data:
+    driver: local
   zookeeper_data:
 
 networks:
